@@ -19,6 +19,11 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // Swipe state
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+
   const categoryCards = useMemo(() => {
     if (category.name === 'FAVORITEN') {
         return allCards.filter(card => isFavorite(card.id));
@@ -47,7 +52,49 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
         onDelete(cardToDelete.id);
     }
   }
-  
+
+  // Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 1) {
+        setTouchStartX(null);
+        return;
+    }
+    setTouchStartX(e.touches[0].clientX);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX === null || e.touches.length > 1) return;
+    
+    const currentX = e.touches[0].clientX;
+    const delta = currentX - touchStartX;
+
+    // Prevent click on swipe
+    if (Math.abs(delta) > 10) {
+      e.preventDefault();
+    }
+    
+    setTouchDeltaX(delta);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX === null) return;
+
+    const swipeThreshold = 50; 
+
+    if (Math.abs(touchDeltaX) > swipeThreshold) {
+        if (touchDeltaX < 0) {
+            handleNext();
+        } else {
+            handlePrev();
+        }
+    }
+
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchDeltaX(0);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') {
@@ -82,7 +129,7 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   const isCurrentCardFavorite = isFavorite(currentCard.id);
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
       <button onClick={onBack} aria-label="Zurück" className="absolute top-4 right-4 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2">
         <CloseIcon className="w-8 h-8" />
       </button>
@@ -91,17 +138,30 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
         <ArrowLeftIcon className="w-8 h-8" />
       </button>
       
-      <div className="w-full max-w-sm h-[600px] max-h-[80vh] aspect-[3/4.5] mx-auto relative">
-        <PrayerCard card={currentCard} category={category} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
-        <button 
-          aria-label="Karte umdrehen"
-          className="absolute bottom-4 right-4 z-20 text-white bg-black bg-opacity-30 rounded-full p-2 transform hover:scale-110 transition-transform"
-          onClick={(e) => {
-              e.stopPropagation();
-              setIsFlipped(!isFlipped);
-          }}>
-           <FlipIcon className="w-6 h-6" />
-        </button>
+      <div 
+        className="w-full max-w-sm h-[600px] max-h-[80vh] aspect-[3/4.5] mx-auto"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div 
+            className="w-full h-full relative"
+            style={{ 
+              transform: `translateX(${touchDeltaX}px)`, 
+              transition: isSwiping ? 'none' : 'transform 0.3s ease-out' 
+            }}
+          >
+          <PrayerCard card={currentCard} category={category} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
+          <button 
+            aria-label="Karte umdrehen"
+            className="absolute bottom-4 right-4 z-20 text-white bg-black bg-opacity-30 rounded-full p-2 transform hover:scale-110 transition-transform"
+            onClick={(e) => {
+                e.stopPropagation();
+                setIsFlipped(!isFlipped);
+            }}>
+             <FlipIcon className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
       <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2">

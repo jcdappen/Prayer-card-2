@@ -1,31 +1,31 @@
 
 import React from 'react';
 import type { PrayerCardData, CategoryInfo } from '../types';
-import { ArrowLeftIcon, PlusIcon } from './icons';
+import { HomeIcon, PlusIcon } from './icons';
+import { CATEGORIES } from '../constants';
 
 interface CardThumbnailProps {
   card: PrayerCardData;
-  category: CategoryInfo;
   onClick: () => void;
 }
 
-const CardThumbnail: React.FC<CardThumbnailProps> = ({ card, category, onClick }) => {
+const CardThumbnail: React.FC<CardThumbnailProps> = ({ card, onClick }) => {
   const title = card.frontTitle || "Unbenannte Karte";
-  const actualCategory = card.category !== "FAVORITEN" ? category : undefined;
+  const cardCategoryInfo = CATEGORIES[card.category];
 
   return (
-    <div 
-      onClick={onClick} 
-      className="cursor-pointer group rounded-lg shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 aspect-[3/4.5] flex items-center justify-center p-1 text-center"
-      style={{ backgroundColor: actualCategory?.color || '#cccccc' }}
+    <button
+      onClick={onClick}
+      className="w-full text-center p-6 rounded-lg transition-opacity duration-200 hover:opacity-90"
+      style={{
+        backgroundColor: cardCategoryInfo?.color || '#cccccc',
+        color: cardCategoryInfo?.textColor || '#000000'
+      }}
     >
-      <h4 
-        className="font-serif font-bold text-sm leading-tight"
-        style={{ color: actualCategory?.textColor || '#000000' }}
-      >
+      <h4 className="font-semibold text-lg leading-tight">
         {title.replace(/\n/g, ' ')}
       </h4>
-    </div>
+    </button>
   );
 };
 
@@ -41,14 +41,15 @@ interface CategoryOverviewProps {
 export const CategoryOverview: React.FC<CategoryOverviewProps> = ({ category, cards, onSelectCard, onBack, onAddCard }) => {
   return (
     <div className="w-full animate-fade-in">
-       <header className="flex justify-between items-center mb-6 sticky top-0 bg-gray-100 dark:bg-gray-900 py-4 z-20">
-        <button onClick={onBack} className="flex items-center gap-2 text-lg font-semibold hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
-          <ArrowLeftIcon className="w-6 h-6" />
-          <span>Alle Kategorien</span>
-        </button>
-        <h2 className="text-3xl font-bold font-serif text-center" style={{color: category.color}}>{category.name}</h2>
+       <header className="flex justify-between items-center mb-8 sticky top-0 bg-gray-100 dark:bg-gray-900 py-4 z-20">
+        <div className="w-48">
+            <button onClick={onBack} aria-label="Zurück zur Startseite" className="text-gray-600 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-2 rounded-full">
+              <HomeIcon className="w-8 h-8" />
+            </button>
+        </div>
+        <h2 className="text-3xl font-bold font-serif text-center px-4" style={{color: category.color}}>{category.name}</h2>
         <div className="w-48 text-right"> {/* Spacer to balance title */}
-        {category.isSpecial && (
+        {category.isSpecial && category.name !== 'FAVORITEN' && (
            <button onClick={onAddCard} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
              <PlusIcon className="w-5 h-5" />
              <span>Neue Karte</span>
@@ -58,12 +59,11 @@ export const CategoryOverview: React.FC<CategoryOverviewProps> = ({ category, ca
       </header>
 
       {cards.length > 0 ? (
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-8 xl:grid-cols-10 gap-3">
+        <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
           {cards.map((card, index) => (
             <CardThumbnail 
               key={card.id} 
               card={card} 
-              category={category} 
               onClick={() => onSelectCard(index)}
             />
           ))}
