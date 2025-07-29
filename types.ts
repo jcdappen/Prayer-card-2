@@ -7,7 +7,7 @@ export interface PrayerCardData {
   backTitle: string;
   backTask: string;
   backText: string;
-  isCustom: boolean;
+  isCustom?: boolean;
 }
 
 export interface CategoryInfo {
