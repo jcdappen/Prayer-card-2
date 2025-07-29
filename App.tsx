@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { supabase } from './lib/supabaseClient';
+import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from './lib/supabaseClient'; // Korrigierter Pfad
 import { CategoryGrid } from './components/CategoryGrid';
 import { CardViewer } from './components/CardViewer';
 import { CardEditor } from './components/CardEditor';
@@ -18,64 +18,53 @@ type ViewState =
   | { name: 'viewer', category: CategoryInfo, initialIndex: number }
   | { name: 'editor', card: PrayerCardData | null };
 
-const App: React.FC = () => {
+function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Temporär: Standard-Karten bis Custom Cards implementiert sind
+  // Deine bestehende App-Logik
   const allCards = useMemo(() => CARDS, []);
   const [view, setView] = useState<ViewState>({ name: 'grid' });
 
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session loaded:', session);
-      setSession(session);
-      setLoading(false);
-    });
+    // Get initial session first - Das ist der Fix!
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        console.log('Initial session loaded:', session);
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Auth state change listener mit verbessertem Event Handling
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth event:', event, 'Session:', session);
-      
-      // Verwende setTimeout wie in der Dokumentation empfohlen
-      setTimeout(async () => {
-        if (event === 'INITIAL_SESSION') {
-          console.log('Handling initial session');
-          setSession(session);
-        } else if (event === 'SIGNED_IN') {
-          console.log('User signed in');
-          setSession(session);
+    getInitialSession();
+
+    // Set up listener with proper cleanup - Das ist der verbesserte Teil!
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth event:', event);
+        setSession(session);
+        
+        if (event === 'SIGNED_IN') {
           setShowAuthModal(false);
           if (pendingAction) {
             pendingAction();
             setPendingAction(null);
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-          setSession(null);
           setView({ name: 'grid' });
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed');
-          setSession(session);
-        } else if (event === 'USER_UPDATED') {
-          console.log('User updated');
-          setSession(session);
-        } else if (event === 'PASSWORD_RECOVERY') {
-          console.log('Password recovery');
-          // Handle password recovery if needed
         }
-      }, 0);
-    });
+      }
+    );
 
-    // Cleanup function
-    return () => {
-      console.log('Cleaning up auth listener');
-      data.subscription.unsubscribe();
-    };
-  }, [pendingAction]);
+    // Critical: Always return cleanup function
+    return () => subscription.unsubscribe();
+  }, []); // Empty dependency array is essential
 
   if (loading) {
     return (
@@ -88,6 +77,7 @@ const App: React.FC = () => {
     );
   }
 
+  // Deine bestehenden Handler-Funktionen
   const requireAuth = (action: () => void) => {
     if (!session) {
       setPendingAction(() => action);
@@ -264,6 +254,6 @@ const App: React.FC = () => {
       </footer>
     </div>
   );
-};
+}
 
 export default App;
