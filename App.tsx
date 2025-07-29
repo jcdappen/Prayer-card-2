@@ -5,9 +5,12 @@ import { CardViewer } from './components/CardViewer';
 import { CardEditor } from './components/CardEditor';
 import { HowToUse } from './components/HowToUse';
 import { CategoryOverview } from './components/CategoryOverview';
+import { Auth } from './components/Auth';
 import { CATEGORIES } from './constants';
 import { CARDS } from './data/cards';
 import type { CategoryInfo, PrayerCardData } from './types';
+import type { Session } from '@supabase/supabase-js';
+import { UserIcon } from './components/icons';
 
 type ViewState = 
   | { name: 'grid' }
@@ -16,43 +19,30 @@ type ViewState =
   | { name: 'editor', card: PrayerCardData | null };
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Temporär: Nur die Standard-Karten, bis Custom Cards funktionieren
   const allCards = useMemo(() => CARDS, []);
   const [view, setView] = useState<ViewState>({ name: 'grid' });
 
   useEffect(() => {
-    console.log('Starting auth setup...');
-    
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Initial session:', { session, error });
-      if (error) {
-        console.error('Initial session error:', error);
-      } else {
-        setUser(session?.user ?? null);
-      }
-      setLoading(false);
-    }).catch((err) => {
-      console.error('Initial auth error:', err);
+    // Initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setLoading(false);
     });
 
-    // Auth state listener
-    console.log('Setting up auth listener...');
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', { event, session });
-      try {
-        setUser(session?.user ?? null);
-      } catch (err) {
-        console.error('Error in auth state change:', err);
+    // Auth listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (_event === 'SIGNED_IN') {
+        setShowAuthModal(false);
       }
     });
 
-    return () => {
-      console.log('Cleaning up auth listener...');
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
@@ -60,23 +50,17 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading Auth...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Simple sign in test function
-  const handleTestSignIn = async () => {
-    console.log('Testing sign in...');
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'test@example.com',
-        password: 'testpassword'
-      });
-      console.log('Sign in result:', { data, error });
-    } catch (err) {
-      console.error('Sign in error:', err);
+  const requireAuth = (action: () => void) => {
+    if (!session) {
+      setShowAuthModal(true);
+    } else {
+      action();
     }
   };
 
@@ -89,19 +73,39 @@ const App: React.FC = () => {
   };
   
   const handleAddCard = () => {
-    alert('Add card - User: ' + (user ? user.email : 'not logged in'));
+    requireAuth(() => {
+      setView({ name: 'editor', card: null });
+    });
   };
 
   const handleEditCard = (card: PrayerCardData) => {
-    alert('Edit card - User: ' + (user ? user.email : 'not logged in'));
+    requireAuth(() => {
+      setView({ name: 'editor', card });
+    });
   };
   
   const handleDeleteCard = (cardId: string) => {
-    alert('Delete card - User: ' + (user ? user.email : 'not logged in'));
+    requireAuth(() => {
+      alert(`Delete card ${cardId} - Coming soon!`);
+    });
   };
 
   const handleSaveCard = (cardData: PrayerCardData) => {
-    alert('Save card - User: ' + (user ? user.email : 'not logged in'));
+    requireAuth(() => {
+      alert('Save card - Coming soon!');
+      setView({ name: 'grid' });
+    });
+  };
+
+  const handleToggleFavorite = (cardId: string) => {
+    requireAuth(() => {
+      alert(`Toggle favorite ${cardId} - Coming soon!`);
+    });
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setView({ name: 'grid' });
   };
 
   const handleBack = () => {
@@ -139,7 +143,7 @@ const App: React.FC = () => {
           onEdit={handleEditCard}
           onDelete={handleDeleteCard}
           isFavorite={() => false}
-          onToggleFavorite={() => alert('Favorites test')}
+          onToggleFavorite={handleToggleFavorite}
         />;
       case 'editor':
         return <CardEditor 
@@ -165,9 +169,40 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      <header className="text-center py-6 bg-white dark:bg-gray-800 shadow-md">
-        <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-5xl font-extrabold font-serif tracking-tight text-gray-900 dark:text-white">
+      {showAuthModal && (
+        <Auth 
+          onClose={() => setShowAuthModal(false)} 
+          onLogin={(session) => setSession(session)} 
+        />
+      )}
+      
+      <header className="text-center py-6 bg-white dark:bg-gray-800 shadow-md relative">
+        <div className="absolute top-4 right-4 z-10">
+          {session ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
+                {session.user.email}
+              </span>
+              <button 
+                onClick={handleLogout} 
+                className="px-3 py-2 text-sm rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              >
+                Abmelden
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={() => setShowAuthModal(true)} 
+              className="flex items-center gap-2 px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+            >
+              <UserIcon className="w-5 h-5" />
+              <span className="hidden sm:block">Anmelden</span>
+            </button>
+          )}
+        </div>
+        
+        <div className="max-w-4xl mx-auto px-4 sm:pt-0">
+          <h1 className="text-5xl font-extrabold font-serif tracking-tight text-gray-900 dark:text-white pt-8 sm:pt-0">
             <span className="block">LEAD</span>
             <span className="block text-2xl tracking-widest text-gray-500 dark:text-gray-400 my-1">WITH</span>
             <span className="block">PRAYER</span>
@@ -175,17 +210,6 @@ const App: React.FC = () => {
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
             Eine interaktive digitale Ressource für die Gebetskarten.
           </p>
-          <div className="mt-2 flex items-center justify-center gap-4">
-            <p className="text-sm text-blue-600">
-              User: {user ? user.email : 'Not logged in'}
-            </p>
-            <button 
-              onClick={handleTestSignIn}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Test Sign In
-            </button>
-          </div>
         </div>
       </header>
       
@@ -194,7 +218,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
-        <p>Eine zusätztige Ressource, die zusammen mit Lead With Prayer von Ryan Skoog, Peter Greer und Cameron Doolittle erstellt wurde.</p>
+        <p>Eine zusätzliche Ressource, die zusammen mit Lead With Prayer von Ryan Skoog, Peter Greer und Cameron Doolittle erstellt wurde.</p>
         <p>&copy; 2024. Für den persönlichen und kirchlichen Gebrauch.</p>
       </footer>
     </div>
