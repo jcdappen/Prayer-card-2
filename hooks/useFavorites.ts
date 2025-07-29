@@ -2,6 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import type { Database } from '../lib/database.types';
+
+type UserFavoritesInsert = Database['public']['Tables']['user_favorites']['Insert'];
+
 
 export const useFavorites = (session: Session | null) => {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -62,9 +66,10 @@ export const useFavorites = (session: Session | null) => {
         if (error) throw error;
 
       } else {
+        const favoriteToInsert: UserFavoritesInsert = { user_id: session.user.id, card_id: cardId };
         const { error } = await supabase
           .from('user_favorites')
-          .insert({ user_id: session.user.id, card_id: cardId });
+          .insert(favoriteToInsert);
 
         if (error) throw error;
       }

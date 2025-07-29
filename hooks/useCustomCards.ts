@@ -3,6 +3,10 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { PrayerCardData } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import type { Database } from '../lib/database.types';
+
+type CardsInsert = Database['public']['Tables']['cards']['Insert'];
+type CardsUpdate = Database['public']['Tables']['cards']['Update'];
 
 export const useCustomCards = (session: Session | null) => {
   const [customCards, setCustomCards] = useState<PrayerCardData[]>([]);
@@ -52,7 +56,7 @@ export const useCustomCards = (session: Session | null) => {
     if (!session?.user) throw new Error("User must be logged in to add a card.");
     
     setLoading(true);
-    const cardToInsert = {
+    const cardToInsert: CardsInsert = {
       user_id: session.user.id,
       front_title: cardData.frontTitle,
       front_text: cardData.frontText,
@@ -95,7 +99,7 @@ export const useCustomCards = (session: Session | null) => {
     if (!session?.user) throw new Error("User must be logged in to update a card.");
 
     setLoading(true);
-    const cardToUpdate = {
+    const cardToUpdate: CardsUpdate = {
       front_title: updatedCard.frontTitle,
       front_text: updatedCard.frontText,
       back_title: updatedCard.backTitle,
