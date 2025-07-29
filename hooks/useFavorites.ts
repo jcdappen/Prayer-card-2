@@ -1,45 +1,89 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { PrayerCardData } from '../types';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 
-const STORAGE_KEY_FAVORITES = 'prayer_cards_favorites_v1';
-
-export const useFavorites = () => {
+export const useFavorites = (session: Session | null) => {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+
+  const fetchFavorites = useCallback(async () => {
+    if (!session?.user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_favorites')
+        .select('card_id')
+        .eq('user_id', session.user.id);
+
+      if (error) throw error;
+      
+      setFavoriteIds(new Set(data.map(fav => fav.card_id)));
+    } catch (error) {
+      console.error("Error fetching favorites:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
 
   useEffect(() => {
+    if (session) {
+      fetchFavorites();
+    } else {
+      setFavoriteIds(new Set()); // Clear on logout
+    }
+  }, [session, fetchFavorites]);
+
+  const toggleFavorite = useCallback(async (cardId: string) => {
+    if (!session?.user) {
+        console.error("User must be logged in to manage favorites.");
+        return;
+    }
+
+    const isCurrentlyFavorite = favoriteIds.has(cardId);
+    const newFavorites = new Set(favoriteIds);
+
+    // Optimistic update
+    if (isCurrentlyFavorite) {
+        newFavorites.delete(cardId);
+    } else {
+        newFavorites.add(cardId);
+    }
+    setFavoriteIds(newFavorites);
+
     try {
-      const storedFavorites = localStorage.getItem(STORAGE_KEY_FAVORITES);
-      if (storedFavorites) {
-        setFavoriteIds(new Set(JSON.parse(storedFavorites)));
+      if (isCurrentlyFavorite) {
+        const { error } = await supabase
+          .from('user_favorites')
+          .delete()
+          .match({ user_id: session.user.id, card_id: cardId });
+        
+        if (error) throw error;
+
+      } else {
+        const { error } = await supabase
+          .from('user_favorites')
+          .insert({ user_id: session.user.id, card_id: cardId });
+
+        if (error) throw error;
       }
     } catch (error) {
-      console.error("Fehler beim Laden der Favoriten aus dem localStorage", error);
+      console.error("Error toggling favorite:", error);
+      // Revert state on error
+      const revertedFavorites = new Set(favoriteIds);
+      if(isCurrentlyFavorite) {
+        revertedFavorites.add(cardId);
+      } else {
+        revertedFavorites.delete(cardId);
+      }
+      setFavoriteIds(revertedFavorites);
     }
-  }, []);
-
-  const saveFavorites = (ids: Set<string>) => {
-    try {
-      localStorage.setItem(STORAGE_KEY_FAVORITES, JSON.stringify(Array.from(ids)));
-      setFavoriteIds(ids);
-    } catch (error) {
-      console.error("Fehler beim Speichern der Favoriten im localStorage", error);
-    }
-  };
-
-  const toggleFavorite = useCallback((cardId: string) => {
-    const newFavorites = new Set(favoriteIds);
-    if (newFavorites.has(cardId)) {
-      newFavorites.delete(cardId);
-    } else {
-      newFavorites.add(cardId);
-    }
-    saveFavorites(newFavorites);
-  }, [favoriteIds]);
-
+  }, [favoriteIds, session]);
+  
   const isFavorite = useCallback((cardId: string) => {
     return favoriteIds.has(cardId);
   }, [favoriteIds]);
 
-  return { favoriteIds, toggleFavorite, isFavorite };
+  return { favoriteIds, toggleFavorite, isFavorite, loading, fetchFavorites };
 };
