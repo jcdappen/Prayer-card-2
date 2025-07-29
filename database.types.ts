@@ -43,14 +43,6 @@ export interface Database {
           back_text?: string
           category?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "cards_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
       }
       user_favorites: {
         Row: {
@@ -71,14 +63,6 @@ export interface Database {
           user_id?: string
           card_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_favorites_user_id_fkey"
-            columns: ["user_id"]
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
       }
     }
     Views: {
