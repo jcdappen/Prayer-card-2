@@ -21,23 +21,38 @@ const App: React.FC = () => {
   const allCards = useMemo(() => CARDS, []);
   const [view, setView] = useState<ViewState>({ name: 'grid' });
 
-  // Minimal Auth Test
   useEffect(() => {
-    console.log('Starting auth check...');
+    console.log('Starting auth setup...');
     
-    // Teste nur die Session ohne onAuthStateChange
+    // Initial session check
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('Session check:', { session, error });
+      console.log('Initial session:', { session, error });
       if (error) {
-        console.error('Session error:', error);
+        console.error('Initial session error:', error);
       } else {
         setUser(session?.user ?? null);
       }
       setLoading(false);
     }).catch((err) => {
-      console.error('Auth error:', err);
+      console.error('Initial auth error:', err);
       setLoading(false);
     });
+
+    // Auth state listener
+    console.log('Setting up auth listener...');
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', { event, session });
+      try {
+        setUser(session?.user ?? null);
+      } catch (err) {
+        console.error('Error in auth state change:', err);
+      }
+    });
+
+    return () => {
+      console.log('Cleaning up auth listener...');
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
@@ -45,11 +60,25 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Testing Auth...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading Auth...</p>
         </div>
       </div>
     );
   }
+
+  // Simple sign in test function
+  const handleTestSignIn = async () => {
+    console.log('Testing sign in...');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'test@example.com',
+        password: 'testpassword'
+      });
+      console.log('Sign in result:', { data, error });
+    } catch (err) {
+      console.error('Sign in error:', err);
+    }
+  };
 
   const handleSelectCategory = (category: CategoryInfo) => {
     setView({ name: 'overview', category });
@@ -60,19 +89,19 @@ const App: React.FC = () => {
   };
   
   const handleAddCard = () => {
-    alert('Add card feature - user: ' + (user ? user.email : 'not logged in'));
+    alert('Add card - User: ' + (user ? user.email : 'not logged in'));
   };
 
   const handleEditCard = (card: PrayerCardData) => {
-    alert('Edit card feature - user: ' + (user ? user.email : 'not logged in'));
+    alert('Edit card - User: ' + (user ? user.email : 'not logged in'));
   };
   
   const handleDeleteCard = (cardId: string) => {
-    alert('Delete card feature - user: ' + (user ? user.email : 'not logged in'));
+    alert('Delete card - User: ' + (user ? user.email : 'not logged in'));
   };
 
   const handleSaveCard = (cardData: PrayerCardData) => {
-    alert('Save card feature - user: ' + (user ? user.email : 'not logged in'));
+    alert('Save card - User: ' + (user ? user.email : 'not logged in'));
   };
 
   const handleBack = () => {
@@ -110,7 +139,7 @@ const App: React.FC = () => {
           onEdit={handleEditCard}
           onDelete={handleDeleteCard}
           isFavorite={() => false}
-          onToggleFavorite={() => alert('Favorites feature')}
+          onToggleFavorite={() => alert('Favorites test')}
         />;
       case 'editor':
         return <CardEditor 
@@ -146,9 +175,17 @@ const App: React.FC = () => {
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
             Eine interaktive digitale Ressource für die Gebetskarten.
           </p>
-          <p className="mt-2 text-sm text-blue-600">
-            AUTH TEST - User: {user ? user.email : 'Not logged in'}
-          </p>
+          <div className="mt-2 flex items-center justify-center gap-4">
+            <p className="text-sm text-blue-600">
+              User: {user ? user.email : 'Not logged in'}
+            </p>
+            <button 
+              onClick={handleTestSignIn}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Test Sign In
+            </button>
+          </div>
         </div>
       </header>
       
@@ -157,7 +194,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
-        <p>Eine zusätzliche Ressource, die zusammen mit Lead With Prayer von Ryan Skoog, Peter Greer und Cameron Doolittle erstellt wurde.</p>
+        <p>Eine zusätztige Ressource, die zusammen mit Lead With Prayer von Ryan Skoog, Peter Greer und Cameron Doolittle erstellt wurde.</p>
         <p>&copy; 2024. Für den persönlichen und kirchlichen Gebrauch.</p>
       </footer>
     </div>
