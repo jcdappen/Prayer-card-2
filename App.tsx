@@ -22,28 +22,60 @@ const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // Temporär: Nur die Standard-Karten, bis Custom Cards funktionieren
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  // Temporär: Standard-Karten bis Custom Cards implementiert sind
   const allCards = useMemo(() => CARDS, []);
   const [view, setView] = useState<ViewState>({ name: 'grid' });
 
   useEffect(() => {
-    // Initial session
+    // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session loaded:', session);
       setSession(session);
       setLoading(false);
     });
 
-    // Auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (_event === 'SIGNED_IN') {
-        setShowAuthModal(false);
-      }
+    // Auth state change listener mit verbessertem Event Handling
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', session);
+      
+      // Verwende setTimeout wie in der Dokumentation empfohlen
+      setTimeout(async () => {
+        if (event === 'INITIAL_SESSION') {
+          console.log('Handling initial session');
+          setSession(session);
+        } else if (event === 'SIGNED_IN') {
+          console.log('User signed in');
+          setSession(session);
+          setShowAuthModal(false);
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          setSession(null);
+          setView({ name: 'grid' });
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed');
+          setSession(session);
+        } else if (event === 'USER_UPDATED') {
+          console.log('User updated');
+          setSession(session);
+        } else if (event === 'PASSWORD_RECOVERY') {
+          console.log('Password recovery');
+          // Handle password recovery if needed
+        }
+      }, 0);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Cleanup function
+    return () => {
+      console.log('Cleaning up auth listener');
+      data.subscription.unsubscribe();
+    };
+  }, [pendingAction]);
 
   if (loading) {
     return (
@@ -58,6 +90,7 @@ const App: React.FC = () => {
 
   const requireAuth = (action: () => void) => {
     if (!session) {
+      setPendingAction(() => action);
       setShowAuthModal(true);
     } else {
       action();
@@ -86,26 +119,29 @@ const App: React.FC = () => {
   
   const handleDeleteCard = (cardId: string) => {
     requireAuth(() => {
-      alert(`Delete card ${cardId} - Coming soon!`);
+      alert(`Delete card ${cardId} - Feature coming soon!`);
     });
   };
 
   const handleSaveCard = (cardData: PrayerCardData) => {
     requireAuth(() => {
-      alert('Save card - Coming soon!');
+      alert('Save card - Feature coming soon!');
       setView({ name: 'grid' });
     });
   };
 
   const handleToggleFavorite = (cardId: string) => {
     requireAuth(() => {
-      alert(`Toggle favorite ${cardId} - Coming soon!`);
+      alert(`Toggle favorite ${cardId} - Feature coming soon!`);
     });
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setView({ name: 'grid' });
+    console.log('Signing out...');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   const handleBack = () => {
@@ -210,6 +246,11 @@ const App: React.FC = () => {
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
             Eine interaktive digitale Ressource für die Gebetskarten.
           </p>
+          {session && (
+            <p className="mt-2 text-sm text-green-600">
+              ✅ Angemeldet als {session.user.email}
+            </p>
+          )}
         </div>
       </header>
       
