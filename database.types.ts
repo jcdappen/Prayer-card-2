@@ -3,7 +3,7 @@ export type Json =
   | number
   | boolean
   | null
-  | { [key: string]: Json | undefined }
+  | { [key: string]: Json }
   | Json[]
 
 export interface Database {
@@ -43,6 +43,7 @@ export interface Database {
           back_text?: string
           category?: string
         }
+        Relationships: []
       }
       user_favorites: {
         Row: {
@@ -63,6 +64,7 @@ export interface Database {
           user_id?: string
           card_id?: string
         }
+        Relationships: []
       }
     }
     Views: {
