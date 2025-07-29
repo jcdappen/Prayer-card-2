@@ -1,65 +1,82 @@
+
 import React from 'react';
 import type { PrayerCardData, CategoryInfo } from '../types';
 
 interface CardContentProps {
   title: string;
-  mainText: string;
   taskText?: string;
   cardId: string;
   category: CategoryInfo;
+  mainText?: string;
+  frontContent?: PrayerCardData['frontContent'];
 }
 
-const CardContent: React.FC<CardContentProps> = ({ title, mainText, taskText, cardId, category }) => {
-  const renderMainText = () => {
-    if (!mainText) return null;
-
-    const allBookNames = [
-        'PSALM', 'GENESIS', 'REVELATION', 'LUKE', 'EXODUS', '1 THESSALONIANS', 
-        '1 PETER', 'ZEPHANIAH', 'JOHN', '1 CHRONIC LES', '1 CHRONICLES', 'MATTHEW', 'HEBREWS', 
-        '1 CORINTHIANS', '2 CORINTHIANS', 'PHILIPPIANS', 'PROVERBS', '2 TIMOTHY', 
-        'ROMANS', '1 SAMUEL', 'C OLOSSIANS', 'COLOSSIANS', 'DEUTERONOMY', 'JEREMIAH', 'ISAIAH', 
-        'HABAKKUK', 'NUMBERS', '2 CHRONICLES', 'MARK', 'GALATIANS'
-    ];
-    
-    // This regex finds book names followed by chapter/verse numbers, anywhere in the text.
-    // It's designed to handle multiple references, including those on the same line.
-    const splittingRegex = new RegExp(`\\b(${allBookNames.join('|')})\\s+[\\d:,\\s-–]+`, 'gi');
-    
-    const scriptureMatches = [...mainText.matchAll(splittingRegex)];
-    
-    if (scriptureMatches.length === 0) {
-      // No scriptures found, render text as-is.
-      return <p className="text-lg whitespace-pre-line leading-relaxed">{mainText}</p>;
+const CardContent: React.FC<CardContentProps> = ({ title, mainText, taskText, cardId, category, frontContent }) => {
+  const renderContent = () => {
+    if (frontContent) {
+      const { text1, ref1, text2, ref2, text3, ref3 } = frontContent;
+      const verses = [
+        { text: text1, reference: ref1 },
+        { text: text2, reference: ref2 },
+        { text: text3, reference: ref3 },
+      ];
+      return (
+        <div className="space-y-6">
+          {verses.filter(v => v.text && v.text.trim()).map((verse, index) => (
+            <div key={index}>
+              <p className="text-lg whitespace-pre-line leading-relaxed italic">{verse.text}</p>
+              {verse.reference && verse.reference.trim() && <p className="text-sm font-bold text-gray-500 mt-2 text-right">{verse.reference}</p>}
+            </div>
+          ))}
+        </div>
+      );
     }
 
-    const elements: React.ReactNode[] = [];
-    let lastIndex = 0;
-
-    scriptureMatches.forEach((match, idx) => {
-        // Type guard for match.index
-        if (match.index === undefined) return;
-
-        // Extract the text that comes *before* the scripture reference
-        const quoteText = mainText.substring(lastIndex, match.index).trim();
-        if (quoteText) {
-            elements.push(<p key={`quote-${idx}`} className="text-lg whitespace-pre-line leading-relaxed italic">{quoteText}</p>);
-        }
-
-        // The scripture reference itself. Trim trailing commas for cleaner display.
-        const scriptureText = match[0].trim().replace(/,$/, '');
-        elements.push(<p key={`scripture-${idx}`} className="text-sm font-bold text-gray-500 mt-1">{scriptureText}</p>);
-
-        // Update the index for the next slice of text
-        lastIndex = match.index + match[0].length;
-    });
-
-    // Add any remaining text after the last scripture reference
-    const remainingText = mainText.substring(lastIndex).trim();
-    if (remainingText) {
-        elements.push(<p key="remaining" className="text-lg whitespace-pre-line leading-relaxed">{remainingText}</p>);
+    if (mainText) {
+      // This is the old rendering logic for back text and custom cards
+      const allBookNames = [
+          'PSALM', 'GENESIS', 'REVELATION', 'LUKE', 'EXODUS', '1 THESSALONIANS', 
+          '1 PETER', 'ZEPHANIAH', 'JOHN', '1 CHRONICLES', 'MATTHEW', 'HEBREWS', 
+          '1 CORINTHIANS', '2 CORINTHIANS', 'PHILIPPIANS', 'PROVERBS', '2 TIMOTHY', 
+          'ROMANS', '1 SAMUEL', 'COLOSSIANS', 'DEUTERONOMY', 'JEREMIAH', 'ISAIAH', 
+          'HABAKKUK', 'NUMBERS', '2 CHRONICLES', 'MARK', 'GALATIANS', '1 JOHN', '2 PETER', 'JOSHUA'
+      ];
+      
+      // This regex finds book names followed by chapter/verse numbers.
+      const splittingRegex = new RegExp(`\\b(${allBookNames.join('|').replace(/\s/g, '\\s')})\\s+[\\d:,\\s-–]+`, 'gi');
+      
+      const scriptureMatches = [...mainText.matchAll(splittingRegex)];
+      
+      if (scriptureMatches.length === 0) {
+        return <p className="text-lg whitespace-pre-line leading-relaxed">{mainText}</p>;
+      }
+  
+      const elements: React.ReactNode[] = [];
+      let lastIndex = 0;
+  
+      scriptureMatches.forEach((match, idx) => {
+          if (match.index === undefined) return;
+  
+          const quoteText = mainText.substring(lastIndex, match.index).trim();
+          if (quoteText) {
+              elements.push(<p key={`quote-${idx}`} className="text-lg whitespace-pre-line leading-relaxed italic">{quoteText}</p>);
+          }
+  
+          const scriptureText = match[0].trim().replace(/,$/, '');
+          elements.push(<p key={`scripture-${idx}`} className="text-sm font-bold text-gray-500 mt-1">{scriptureText}</p>);
+  
+          lastIndex = match.index + match[0].length;
+      });
+  
+      const remainingText = mainText.substring(lastIndex).trim();
+      if (remainingText) {
+          elements.push(<p key="remaining" className="text-lg whitespace-pre-line leading-relaxed">{remainingText}</p>);
+      }
+  
+      return elements;
     }
 
-    return elements;
+    return null;
   };
   
   const cardIdentifier = category.isSpecial ? '' : cardId;
@@ -72,7 +89,7 @@ const CardContent: React.FC<CardContentProps> = ({ title, mainText, taskText, ca
       <div className="flex-grow bg-white p-6 text-gray-800 flex flex-col justify-center items-center text-center overflow-y-auto">
         <div className="space-y-4 w-full">
           {taskText && <p className="text-xl font-bold italic text-gray-700 whitespace-pre-line">{taskText}</p>}
-          {renderMainText()}
+          {renderContent()}
         </div>
       </div>
       <div style={{ backgroundColor: category.color, color: category.textColor }} className="py-2 px-4 text-center text-xs font-bold">
@@ -106,9 +123,10 @@ export const PrayerCard: React.FC<PrayerCardProps & { isFlipped: boolean; onFlip
         <div className="absolute inset-0 [backface-visibility:hidden] shadow-2xl rounded-2xl overflow-hidden">
           <CardContent 
             title={card.frontTitle} 
-            mainText={card.frontText} 
             cardId={card.id} 
-            category={category} 
+            category={category}
+            frontContent={card.frontContent}
+            mainText={card.frontText}
           />
         </div>
         

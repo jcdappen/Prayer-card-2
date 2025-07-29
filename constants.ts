@@ -6,7 +6,7 @@ export const CATEGORIES: Record<string, CategoryInfo> = {
     name: "PRAISE & GRATITUDE",
     color: "#D98A6C",
     textColor: "#FFFFFF",
-    cardCount: 8,
+    cardCount: 11,
   },
   "ABIDING & PRESENCE": {
     name: "ABIDING & PRESENCE",
@@ -48,7 +48,7 @@ export const CATEGORIES: Record<string, CategoryInfo> = {
     name: "ONE-SENTENCE PRAYERS",
     color: "#F0C4B8",
     textColor: "#333333",
-    cardCount: 4,
+    cardCount: 5,
   },
     "FAVORITEN": {
     name: "FAVORITEN",
