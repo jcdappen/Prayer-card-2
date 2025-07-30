@@ -139,6 +139,9 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   // A card is editable if it's a person card or a custom prayer card
   const isEditable = currentCard.category === 'PERSONEN' || (currentCard as PrayerCardData).isCustom;
 
+  const separatorClass = cardCategoryInfo.textColor === '#FFFFFF' ? 'bg-white/30' : 'bg-black/20';
+  const hoverBgClass = cardCategoryInfo.textColor === '#FFFFFF' ? 'hover:bg-black/20' : 'hover:bg-white/30';
+
   const renderCard = () => {
     if (currentCard.category === 'PERSONEN') {
         return <PersonCard card={currentCard as PersonCardData} category={cardCategoryInfo} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
@@ -148,12 +151,9 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
-      <button onClick={onBack} aria-label="Zurück" className="absolute top-4 right-4 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2">
-        <CloseIcon className="w-8 h-8" />
-      </button>
 
-      <button onClick={handlePrev} aria-label="Vorherige Karte" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2 hidden sm:block">
-        <ArrowLeftIcon className="w-8 h-8" />
+      <button onClick={handlePrev} aria-label="Vorherige Karte" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/50 rounded-full p-2 hidden sm:block">
+        <ArrowLeftIcon className="w-6 h-6" />
       </button>
       
       <div 
@@ -173,50 +173,64 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
         </div>
       </div>
 
-      <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2 hidden sm:block">
-        <ArrowRightIcon className="w-8 h-8" />
+      <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/50 rounded-full p-2 hidden sm:block">
+        <ArrowRightIcon className="w-6 h-6" />
       </button>
       
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white flex items-center bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg gap-3">
+      <div 
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center px-3 py-1 rounded-full shadow-lg gap-2 transition-colors duration-300"
+        style={{
+          backgroundColor: cardCategoryInfo.color,
+          color: cardCategoryInfo.textColor,
+        }}
+      >
         {/* Navigation */}
-        <button onClick={handlePrev} aria-label="Vorherige Karte" className="p-1 rounded-full hover:bg-white/20 transition-colors">
-            <ArrowLeftIcon className="w-6 h-6" />
+        <button onClick={handlePrev} aria-label="Vorherige Karte" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
+            <ArrowLeftIcon className="w-5 h-5" />
         </button>
 
-        <span className="tabular-nums font-semibold text-base text-gray-200 select-none">
+        <span className="tabular-nums font-semibold text-sm select-none opacity-90">
             {currentIndex + 1} / {categoryCards.length}
         </span>
 
-        <button onClick={handleNext} aria-label="Nächste Karte" className="p-1 rounded-full hover:bg-white/20 transition-colors">
-            <ArrowRightIcon className="w-6 h-6" />
+        <button onClick={handleNext} aria-label="Nächste Karte" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
+            <ArrowRightIcon className="w-5 h-5" />
         </button>
 
         {/* Separator */}
-        <div className="w-px h-6 bg-white/30"></div>
+        <div className={`w-px h-5 ${separatorClass}`}></div>
 
         {/* Flip Button */}
-        <button onClick={() => setIsFlipped(!isFlipped)} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte umdrehen">
-            <FlipIcon className="w-6 h-6" />
+        <button onClick={() => setIsFlipped(!isFlipped)} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte umdrehen">
+            <FlipIcon className="w-5 h-5" />
         </button>
         
         {/* Separator */}
-        <div className="w-px h-6 bg-white/30"></div>
+        <div className={`w-px h-5 ${separatorClass}`}></div>
 
-        {/* Actions */}
-        <button onClick={() => onToggleFavorite(currentCard.id)} className={`${isCurrentCardFavorite ? "text-yellow-400" : "text-white"} p-1 rounded-full hover:bg-white/20 transition-colors`} aria-label="Als Favorit markieren">
-            {isCurrentCardFavorite ? <StarIconFilled className="w-6 h-6" /> : <StarIconOutline className="w-6 h-6" />}
+        {/* Favorite Action */}
+        <button onClick={() => onToggleFavorite(currentCard.id)} className={`${isCurrentCardFavorite ? "text-yellow-400" : ""} p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Als Favorit markieren">
+            {isCurrentCardFavorite ? <StarIconFilled className="w-5 h-5" /> : <StarIconOutline className="w-5 h-5" />}
         </button>
         
+        {/* Editable Actions */}
         {isEditable && (
             <>
-                <button onClick={() => onEdit(currentCard)} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte bearbeiten">
-                    <EditIcon className="w-6 h-6" />
+                <div className={`w-px h-5 ${separatorClass}`}></div>
+                <button onClick={() => onEdit(currentCard)} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte bearbeiten">
+                    <EditIcon className="w-5 h-5" />
                 </button>
-                <button onClick={handleDelete} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte löschen">
-                    <TrashIcon className="w-6 h-6" />
+                <button onClick={handleDelete} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte löschen">
+                    <TrashIcon className="w-5 h-5" />
                 </button>
             </>
         )}
+
+        {/* Close Action */}
+        <div className={`w-px h-5 ${separatorClass}`}></div>
+        <button onClick={onBack} aria-label="Ansicht schließen" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
+          <CloseIcon className="w-5 h-5" />
+        </button>
       </div>
     </div>
   );

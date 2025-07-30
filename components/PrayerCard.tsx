@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { PrayerCardData, CategoryInfo } from '../types';
+import { SpeakerWaveIcon, SpeakerXMarkIcon } from './icons';
 
 interface CardContentProps {
   title: string;
@@ -83,10 +84,10 @@ const CardContent: React.FC<CardContentProps> = ({ title, mainText, taskText, ca
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div style={{ backgroundColor: category.color, color: category.textColor }} className="py-3 px-4 text-center font-bold text-lg tracking-wider font-serif">
+      <div style={{ backgroundColor: category.color, color: category.textColor }} className="py-3 px-4 text-center font-bold text-lg tracking-wider font-serif flex items-center justify-center">
         {title.replace(/\n/g, ' ')}
       </div>
-      <div className="flex-grow bg-white p-6 text-gray-800 flex flex-col justify-center items-center text-center overflow-y-auto">
+      <div className="flex-grow bg-white p-6 text-gray-800 flex flex-col justify-center items-center text-center overflow-y-auto relative">
         <div className="space-y-4 w-full">
           {taskText && <p className="text-xl font-bold italic text-gray-700 whitespace-pre-line">{taskText}</p>}
           {renderContent()}
@@ -105,8 +106,54 @@ interface PrayerCardProps {
 }
 
 export const PrayerCard: React.FC<PrayerCardProps & { isFlipped: boolean; onFlip: () => void; }> = ({ card, category, isFlipped, onFlip }) => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const handleCardClick = () => {
+  const canSpeak = 'speechSynthesis' in window && card.frontContent;
+
+  useEffect(() => {
+    // Cleanup speechSynthesis on component unmount or when card is flipped while speaking
+    return () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      }
+    };
+  }, [isFlipped, isSpeaking]);
+
+  const handleToggleSpeech = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card from flipping
+
+    if (!canSpeak) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      const versesToSpeak = [
+        card.frontContent?.text1,
+        card.frontContent?.text2,
+        card.frontContent?.text3
+      ].filter(Boolean).map(v => v.replace(/\n/g, ' ')); // Remove newlines within verses for smoother reading
+      
+      const textToSpeak = versesToSpeak.join('. ... '); // Longer pause with a period and ellipsis
+
+      if (textToSpeak.trim()) {
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.6; // Even slower speech rate
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(utterance);
+        setIsSpeaking(true);
+      }
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only flip if not clicking on an interactive element (like the speech button)
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
     onFlip();
   }
 
@@ -125,6 +172,19 @@ export const PrayerCard: React.FC<PrayerCardProps & { isFlipped: boolean; onFlip
             frontContent={card.frontContent}
             mainText={card.frontText}
           />
+           {canSpeak && (
+            <button
+              onClick={handleToggleSpeech}
+              aria-label={isSpeaking ? "Vorlesen stoppen" : "Bibelverse vorlesen"}
+              className="absolute bottom-10 left-4 z-10 p-2 rounded-full bg-gray-800/50 text-white hover:bg-gray-800/80 transition-all"
+            >
+              {isSpeaking ? (
+                <SpeakerXMarkIcon className="w-5 h-5" />
+              ) : (
+                <SpeakerWaveIcon className="w-5 h-5" />
+              )}
+            </button>
+          )}
         </div>
         
         {/* Back Face */}
