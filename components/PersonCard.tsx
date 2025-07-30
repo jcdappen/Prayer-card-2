@@ -64,14 +64,12 @@ interface PersonCardProps {
 }
 
 export const PersonCard: React.FC<PersonCardProps> = ({ card, category, isFlipped, onFlip }) => {
-  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-        onFlip();
-    }
+  const handleCardClick = () => {
+    onFlip();
   }
 
   return (
-    <div className="w-full h-full [perspective:1000px]" onClick={handleCardClick}>
+    <div className="w-full h-full [perspective:1000px] cursor-pointer" onClick={handleCardClick}>
       <div
         className="relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d]"
         style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}

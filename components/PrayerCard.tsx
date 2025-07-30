@@ -106,15 +106,12 @@ interface PrayerCardProps {
 
 export const PrayerCard: React.FC<PrayerCardProps & { isFlipped: boolean; onFlip: () => void; }> = ({ card, category, isFlipped, onFlip }) => {
 
-  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // We only want to flip the card if the click is on the background, not on buttons inside it
-    if (e.target === e.currentTarget) {
-        onFlip();
-    }
+  const handleCardClick = () => {
+    onFlip();
   }
 
   return (
-    <div className="w-full h-full [perspective:1000px]" onClick={handleCardClick}>
+    <div className="w-full h-full [perspective:1000px] cursor-pointer" onClick={handleCardClick}>
       <div
         className="relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d]"
         style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}

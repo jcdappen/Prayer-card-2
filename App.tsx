@@ -8,10 +8,13 @@ import { HowToUse } from './components/HowToUse';
 import { CategoryOverview } from './components/CategoryOverview';
 import { CATEGORIES } from './constants';
 import { CARDS } from './data/cards';
-import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard } from './types';
+import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard, NotificationSettings } from './types';
 import { useCustomCards } from './hooks/useCustomCards';
 import { usePersonCards } from './hooks/usePersonCards';
 import { useFavorites } from './hooks/useFavorites';
+import { useNotificationSettings } from './hooks/useNotificationSettings';
+import { SettingsModal } from './components/SettingsModal';
+import { SettingsIcon } from './components/icons';
 
 type ViewState = 
   | { name: 'grid' }
@@ -24,10 +27,12 @@ const App: React.FC = () => {
   const { customCards, addCard, updateCard, deleteCard } = useCustomCards();
   const { personCards, addPersonCard, updatePersonCard, deletePersonCard } = usePersonCards();
   const { favoriteIds, toggleFavorite, isFavorite } = useFavorites();
+  const { notificationSettings, saveNotificationSettings } = useNotificationSettings();
   
   const allCards = useMemo(() => [...CARDS, ...customCards, ...personCards], [customCards, personCards]);
   
   const [view, setView] = useState<ViewState>({ name: 'grid' });
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const handleSelectCategory = (category: CategoryInfo) => {
     setView({ name: 'overview', category });
@@ -88,6 +93,11 @@ const App: React.FC = () => {
     const personCategory = CATEGORIES["PERSONEN"];
     const newCount = isExisting ? personCards.length : personCards.length + 1;
     setView({ name: 'overview', category: {...personCategory, cardCount: newCount }});
+  };
+
+  const handleSaveSettings = (newSettings: NotificationSettings) => {
+    saveNotificationSettings(newSettings);
+    setIsSettingsModalOpen(false);
   };
 
   const handleBack = () => {
@@ -168,7 +178,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-      <header className="text-center py-8 bg-white dark:bg-gray-800 shadow-md">
+      <header className="text-center py-8 bg-white dark:bg-gray-800 shadow-md relative">
         <div className="max-w-4xl mx-auto px-4">
             <h1 className="text-5xl font-extrabold font-serif tracking-tight text-gray-900 dark:text-white">
                 <span className="block">LEAD</span>
@@ -179,11 +189,27 @@ const App: React.FC = () => {
                 Eine interaktive digitale Ressource für die Gebetskarten.
             </p>
         </div>
+        <button 
+          onClick={() => setIsSettingsModalOpen(true)} 
+          className="absolute top-4 right-4 text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+          aria-label="Einstellungen für Erinnerungen"
+        >
+          <SettingsIcon className="w-8 h-8" />
+        </button>
       </header>
       
       <main className="container mx-auto px-4 py-8">
         {renderContent()}
       </main>
+
+      {isSettingsModalOpen && (
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          initialSettings={notificationSettings}
+          onSave={handleSaveSettings}
+        />
+      )}
 
        <footer className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
           <p>Eine zusätzliche Ressource, die zusammen mit Lead With Prayer von Ryan Skoog, Peter Greer und Cameron Doolittle erstellt wurde.</p>

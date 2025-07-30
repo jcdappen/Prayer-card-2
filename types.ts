@@ -38,3 +38,9 @@ export interface CategoryInfo {
   cardCount: number;
   isSpecial?: boolean; // For "MEINE KARTEN" and "PERSONEN" tiles
 }
+
+export interface NotificationSettings {
+  enabled: boolean;
+  time: string; // e.g., "08:00"
+  days: number[]; // 0 for Sunday, 1 for Monday, etc.
+}
