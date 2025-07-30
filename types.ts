@@ -18,10 +18,23 @@ export interface PrayerCardData {
   isCustom?: boolean;
 }
 
+export interface PersonCardData {
+  id: string;
+  category: "PERSONEN";
+  name: string;
+  imageUrl: string; // Base64 data URL
+  thankfulFor: string;
+  prayerPoints: string;
+}
+
+
+export type AnyPrayerCard = PrayerCardData | PersonCardData;
+
+
 export interface CategoryInfo {
   name: string;
   color: string;
   textColor: string;
   cardCount: number;
-  isSpecial?: boolean; // For "MEINE KARTEN" tile
+  isSpecial?: boolean; // For "MEINE KARTEN" and "PERSONEN" tiles
 }

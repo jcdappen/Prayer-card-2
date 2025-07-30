@@ -3,24 +3,29 @@ import React, { useState, useMemo } from 'react';
 import { CategoryGrid } from './components/CategoryGrid';
 import { CardViewer } from './components/CardViewer';
 import { CardEditor } from './components/CardEditor';
+import { PersonCardEditor, NewOrExistingPersonCard } from './components/PersonCardEditor';
 import { HowToUse } from './components/HowToUse';
 import { CategoryOverview } from './components/CategoryOverview';
 import { CATEGORIES } from './constants';
 import { CARDS } from './data/cards';
-import type { CategoryInfo, PrayerCardData } from './types';
+import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard } from './types';
 import { useCustomCards } from './hooks/useCustomCards';
+import { usePersonCards } from './hooks/usePersonCards';
 import { useFavorites } from './hooks/useFavorites';
 
 type ViewState = 
   | { name: 'grid' }
   | { name: 'overview', category: CategoryInfo }
   | { name: 'viewer', category: CategoryInfo, initialIndex: number }
-  | { name: 'editor', card: PrayerCardData | null };
+  | { name: 'editor', card: PrayerCardData | null }
+  | { name: 'editor-person', card: PersonCardData | null };
 
 const App: React.FC = () => {
   const { customCards, addCard, updateCard, deleteCard } = useCustomCards();
+  const { personCards, addPersonCard, updatePersonCard, deletePersonCard } = usePersonCards();
   const { favoriteIds, toggleFavorite, isFavorite } = useFavorites();
-  const allCards = useMemo(() => [...CARDS, ...customCards], [customCards]);
+  
+  const allCards = useMemo(() => [...CARDS, ...customCards, ...personCards], [customCards, personCards]);
   
   const [view, setView] = useState<ViewState>({ name: 'grid' });
 
@@ -32,22 +37,36 @@ const App: React.FC = () => {
     setView({ name: 'viewer', category, initialIndex: index });
   };
   
-  const handleAddCard = () => {
-      setView({ name: 'editor', card: null });
+  const handleAddCard = (categoryName: string) => {
+      if (categoryName === 'PERSONEN') {
+        setView({ name: 'editor-person', card: null });
+      } else {
+        setView({ name: 'editor', card: null });
+      }
   };
 
-  const handleEditCard = (card: PrayerCardData) => {
-      setView({ name: 'editor', card });
+  const handleEditCard = (card: AnyPrayerCard) => {
+      if (card.category === 'PERSONEN') {
+        setView({ name: 'editor-person', card: card as PersonCardData });
+      } else {
+        setView({ name: 'editor', card: card as PrayerCardData });
+      }
   };
   
-  const handleDeleteCard = (cardId: string) => {
-    deleteCard(cardId);
+  const handleDeleteCard = (cardId: string, categoryName: string) => {
+    if (categoryName === 'PERSONEN') {
+        deletePersonCard(cardId);
+    } else {
+        deleteCard(cardId);
+    }
+
     if (view.name === 'viewer') {
+        // After deleting, go back to the overview, which will have the updated card list
         setView({ name: 'overview', category: view.category });
     }
   }
 
-  const handleSaveCard = (cardData: PrayerCardData) => {
+  const handleSaveCustomCard = (cardData: PrayerCardData) => {
     if (cardData.isCustom && customCards.some(c => c.id === cardData.id)) {
       updateCard(cardData);
     } else {
@@ -55,6 +74,20 @@ const App: React.FC = () => {
     }
     const myCardsCategory = CATEGORIES["MEINE KARTEN"];
     setView({ name: 'overview', category: {...myCardsCategory, cardCount: customCards.length + 1} });
+  };
+
+  const handleSavePersonCard = (cardData: NewOrExistingPersonCard) => {
+    const isExisting = 'id' in cardData && personCards.some(c => c.id === cardData.id);
+
+    if (isExisting) {
+        updatePersonCard(cardData as PersonCardData);
+    } else {
+        addPersonCard(cardData as Omit<PersonCardData, 'id' | 'category'>);
+    }
+    
+    const personCategory = CATEGORIES["PERSONEN"];
+    const newCount = isExisting ? personCards.length : personCards.length + 1;
+    setView({ name: 'overview', category: {...personCategory, cardCount: newCount }});
   };
 
   const handleBack = () => {
@@ -66,14 +99,13 @@ const App: React.FC = () => {
             setView({ name: 'overview', category: view.category });
             break;
         case 'editor':
-            const wasEditing = !!view.card;
-            if (wasEditing && view.card?.category) {
-                 const category = CATEGORIES[view.card.category] || CATEGORIES['MEINE KARTEN'];
-                 setView({ name: 'overview', category });
-            } else {
-                 setView({ name: 'overview', category: CATEGORIES['MEINE KARTEN']});
-            }
-            break;
+        case 'editor-person':
+             const categoryName = view.card?.category || (view.name === 'editor-person' ? 'PERSONEN' : 'MEINE KARTEN');
+             const category = CATEGORIES[categoryName];
+             setView({ name: 'overview', category });
+             break;
+        default:
+            setView({ name: 'grid' });
     }
   };
 
@@ -108,8 +140,14 @@ const App: React.FC = () => {
       case 'editor':
         return <CardEditor 
                   cardToEdit={view.card} 
-                  onSave={handleSaveCard} 
+                  onSave={handleSaveCustomCard} 
                   onCancel={handleBack} 
+                />;
+      case 'editor-person':
+        return <PersonCardEditor
+                  cardToEdit={view.card}
+                  onSave={handleSavePersonCard}
+                  onCancel={handleBack}
                 />;
       case 'grid':
       default:
@@ -120,6 +158,7 @@ const App: React.FC = () => {
               onSelectCategory={handleSelectCategory} 
               onAddCard={handleAddCard}
               customCardCount={customCards.length}
+              personCardCount={personCards.length}
               favoriteCardCount={favoriteIds.size}
             />
           </>

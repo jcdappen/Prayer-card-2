@@ -1,16 +1,18 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import type { CategoryInfo, PrayerCardData } from '../types';
+import type { CategoryInfo, AnyPrayerCard, PrayerCardData, PersonCardData } from '../types';
 import { PrayerCard } from './PrayerCard';
+import { PersonCard } from './PersonCard';
 import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, FlipIcon, EditIcon, TrashIcon, StarIconOutline, StarIconFilled } from './icons';
+import { CATEGORIES } from '../constants';
+
 
 interface CardViewerProps {
   category: CategoryInfo;
-  allCards: PrayerCardData[];
+  allCards: AnyPrayerCard[];
   initialIndex: number;
   onBack: () => void;
-  onEdit: (card: PrayerCardData) => void;
-  onDelete: (cardId: string) => void;
+  onEdit: (card: AnyPrayerCard) => void;
+  onDelete: (cardId: string, categoryName: string) => void;
   isFavorite: (cardId: string) => boolean;
   onToggleFavorite: (cardId: string) => void;
 }
@@ -32,9 +34,14 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   }, [category.name, allCards, isFavorite]);
 
   useEffect(() => {
-    setCurrentIndex(initialIndex);
+    // If the category changes or the initial card is out of bounds, reset.
+    if (initialIndex >= categoryCards.length) {
+      setCurrentIndex(0);
+    } else {
+      setCurrentIndex(initialIndex);
+    }
     setIsFlipped(false);
-  }, [initialIndex, category.name]);
+  }, [initialIndex, category.name, categoryCards.length]);
 
   const handleNext = () => {
     setCurrentIndex(prev => (prev + 1) % categoryCards.length);
@@ -49,27 +56,27 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   const handleDelete = () => {
     const cardToDelete = categoryCards[currentIndex];
     if (window.confirm("Möchten Sie diese Karte wirklich löschen?")) {
-        onDelete(cardToDelete.id);
+        onDelete(cardToDelete.id, cardToDelete.category);
     }
   }
 
-  // Swipe handlers
+  // Swipe handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 1) {
+    if (e.touches.length !== 1) {
         setTouchStartX(null);
         return;
     }
     setTouchStartX(e.touches[0].clientX);
+    setTouchDeltaX(0); 
     setIsSwiping(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null || e.touches.length > 1) return;
+    if (touchStartX === null || e.touches.length !== 1) return;
     
     const currentX = e.touches[0].clientX;
     const delta = currentX - touchStartX;
 
-    // Prevent click on swipe
     if (Math.abs(delta) > 10) {
       e.preventDefault();
     }
@@ -127,6 +134,17 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
 
   const currentCard = categoryCards[currentIndex];
   const isCurrentCardFavorite = isFavorite(currentCard.id);
+  const cardCategoryInfo = CATEGORIES[currentCard.category] || category;
+  
+  // A card is editable if it's a person card or a custom prayer card
+  const isEditable = currentCard.category === 'PERSONEN' || (currentCard as PrayerCardData).isCustom;
+
+  const renderCard = () => {
+    if (currentCard.category === 'PERSONEN') {
+        return <PersonCard card={currentCard as PersonCardData} category={cardCategoryInfo} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
+    }
+    return <PrayerCard card={currentCard as PrayerCardData} category={cardCategoryInfo} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
+  }
 
   return (
     <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
@@ -134,7 +152,7 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
         <CloseIcon className="w-8 h-8" />
       </button>
 
-      <button onClick={handlePrev} aria-label="Vorherige Karte" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2">
+      <button onClick={handlePrev} aria-label="Vorherige Karte" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2 hidden sm:block">
         <ArrowLeftIcon className="w-8 h-8" />
       </button>
       
@@ -151,40 +169,54 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
               transition: isSwiping ? 'none' : 'transform 0.3s ease-out' 
             }}
           >
-          <PrayerCard card={currentCard} category={category} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} />
-          <button 
-            aria-label="Karte umdrehen"
-            className="absolute bottom-4 right-4 z-20 text-white bg-black bg-opacity-30 rounded-full p-2 transform hover:scale-110 transition-transform"
-            onClick={(e) => {
-                e.stopPropagation();
-                setIsFlipped(!isFlipped);
-            }}>
-             <FlipIcon className="w-6 h-6" />
-          </button>
+          {renderCard()}
         </div>
       </div>
 
-      <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2">
+      <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/30 rounded-full p-2 hidden sm:block">
         <ArrowRightIcon className="w-8 h-8" />
       </button>
       
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-lg font-bold flex items-center gap-4 bg-black/30 px-3 py-1 rounded-full">
-        <button onClick={() => onToggleFavorite(currentCard.id)} className={isCurrentCardFavorite ? "text-yellow-400 hover:text-yellow-300" : "hover:text-yellow-300"} aria-label="Als Favorit markieren">
-            {isCurrentCardFavorite ? <StarIconFilled className="w-5 h-5" /> : <StarIconOutline className="w-5 h-5" />}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white flex items-center bg-black/40 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg gap-3">
+        {/* Navigation */}
+        <button onClick={handlePrev} aria-label="Vorherige Karte" className="p-1 rounded-full hover:bg-white/20 transition-colors">
+            <ArrowLeftIcon className="w-6 h-6" />
         </button>
-        <div className="w-px h-5 bg-white/50"></div>
-        {currentCard.isCustom && (
+
+        <span className="tabular-nums font-semibold text-base text-gray-200 select-none">
+            {currentIndex + 1} / {categoryCards.length}
+        </span>
+
+        <button onClick={handleNext} aria-label="Nächste Karte" className="p-1 rounded-full hover:bg-white/20 transition-colors">
+            <ArrowRightIcon className="w-6 h-6" />
+        </button>
+
+        {/* Separator */}
+        <div className="w-px h-6 bg-white/30"></div>
+
+        {/* Flip Button */}
+        <button onClick={() => setIsFlipped(!isFlipped)} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte umdrehen">
+            <FlipIcon className="w-6 h-6" />
+        </button>
+        
+        {/* Separator */}
+        <div className="w-px h-6 bg-white/30"></div>
+
+        {/* Actions */}
+        <button onClick={() => onToggleFavorite(currentCard.id)} className={`${isCurrentCardFavorite ? "text-yellow-400" : "text-white"} p-1 rounded-full hover:bg-white/20 transition-colors`} aria-label="Als Favorit markieren">
+            {isCurrentCardFavorite ? <StarIconFilled className="w-6 h-6" /> : <StarIconOutline className="w-6 h-6" />}
+        </button>
+        
+        {isEditable && (
             <>
-                <button onClick={() => onEdit(currentCard)} className="hover:text-yellow-300" aria-label="Karte bearbeiten">
-                    <EditIcon className="w-5 h-5" />
+                <button onClick={() => onEdit(currentCard)} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte bearbeiten">
+                    <EditIcon className="w-6 h-6" />
                 </button>
-                <button onClick={handleDelete} className="hover:text-red-400" aria-label="Karte löschen">
-                    <TrashIcon className="w-5 h-5" />
+                <button onClick={handleDelete} className="text-white p-1 rounded-full hover:bg-white/20 transition-colors" aria-label="Karte löschen">
+                    <TrashIcon className="w-6 h-6" />
                 </button>
-                <div className="w-px h-5 bg-white/50"></div>
             </>
         )}
-        <span>{currentIndex + 1} / {categoryCards.length}</span>
       </div>
     </div>
   );

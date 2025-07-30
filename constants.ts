@@ -63,4 +63,11 @@ export const CATEGORIES: Record<string, CategoryInfo> = {
     cardCount: 0, // This will be updated dynamically
     isSpecial: true,
   },
+  "PERSONEN": {
+    name: "PERSONEN",
+    color: "#4DB6AC", // A gentle teal/green
+    textColor: "#FFFFFF",
+    cardCount: 0, // This will be updated dynamically
+    isSpecial: true,
+  }
 };
