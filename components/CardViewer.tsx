@@ -189,7 +189,7 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
       
       {/* Glassmorphic control bar */}
       <div 
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center px-2 py-1 rounded-full gap-1.5 transition-colors duration-300 backdrop-blur-md border border-white/20"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center flex-nowrap px-2 py-1 rounded-full gap-1.5 transition-colors duration-300 backdrop-blur-md border border-white/20"
         style={{
           // Use hex color with appended opacity for a semi-transparent effect
           backgroundColor: cardCategoryInfo.color + 'BF', // 'BF' is ~75% opacity in hex
@@ -201,7 +201,7 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
             <ArrowLeftIcon className="w-4 h-4" />
         </button>
 
-        <span className="tabular-nums font-semibold text-xs select-none opacity-90">
+        <span className="tabular-nums font-semibold text-xs select-none opacity-90 whitespace-nowrap">
             {currentIndex + 1} / {categoryCards.length}
         </span>
 
