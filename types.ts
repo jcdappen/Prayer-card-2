@@ -52,3 +52,16 @@ export interface JournalEntry {
   title: string;   // The user's title for the reflection
   content: string; // The user's reflection
 }
+
+export interface PrayerPlan {
+  id: string;
+  title: string;
+  description: string;
+  cardIds: string[];
+}
+
+export interface PrayerPlanProgress {
+  [planId: string]: {
+    currentDay: number; // 0-indexed
+  };
+}

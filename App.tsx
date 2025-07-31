@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { CategoryGrid } from './components/CategoryGrid';
 import { CardViewer } from './components/CardViewer';
@@ -7,16 +8,22 @@ import { HowToUse } from './components/HowToUse';
 import { CategoryOverview } from './components/CategoryOverview';
 import { CATEGORIES } from './constants';
 import { CARDS } from './data/cards';
-import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard, NotificationSettings, JournalEntry } from './types';
+import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard, NotificationSettings, JournalEntry, PrayerPlan } from './types';
 import { useCustomCards } from './hooks/useCustomCards';
 import { usePersonCards } from './hooks/usePersonCards';
 import { useFavorites } from './hooks/useFavorites';
 import { useNotificationSettings } from './hooks/useNotificationSettings';
 import { SettingsModal } from './components/SettingsModal';
-import { SettingsIcon, BookOpenIcon } from './components/icons';
+import { SettingsIcon, BookOpenIcon, MapIcon } from './components/icons';
 import { useJournal } from './hooks/useJournal';
 import { JournalOverview } from './components/JournalOverview';
 import { JournalModal } from './components/JournalModal';
+import { usePrayerPlans } from './hooks/usePrayerPlans';
+import { PrayerPlansOverview } from './components/PrayerPlansOverview';
+import { PlanCardViewer } from './components/PlanCardViewer';
+import { FeatureTile } from './components/FeatureTile';
+import { PRAYER_PLANS } from './data/plans';
+
 
 type ViewState = 
   | { name: 'grid' }
@@ -24,7 +31,9 @@ type ViewState =
   | { name: 'viewer', category: CategoryInfo, initialIndex: number }
   | { name: 'editor', card: PrayerCardData | null }
   | { name: 'editor-person', card: PersonCardData | null }
-  | { name: 'journal' };
+  | { name: 'journal' }
+  | { name: 'plansOverview' }
+  | { name: 'planViewer', plan: PrayerPlan };
 
 const App: React.FC = () => {
   const { customCards, addCard, updateCard, deleteCard } = useCustomCards();
@@ -32,6 +41,8 @@ const App: React.FC = () => {
   const { favoriteIds, toggleFavorite, isFavorite } = useFavorites();
   const { notificationSettings, saveNotificationSettings } = useNotificationSettings();
   const { entries, addEntry, updateEntry, deleteEntry, getLatestEntryForCard } = useJournal();
+  const { progress: prayerPlanProgress, updatePlanProgress, resetPlan } = usePrayerPlans();
+
   
   const allCards = useMemo(() => [...CARDS, ...customCards, ...personCards], [customCards, personCards]);
   
@@ -149,6 +160,34 @@ const App: React.FC = () => {
         setActiveJournal(null);
     }
   };
+  
+  const handleSelectPlan = (plan: PrayerPlan) => {
+    const currentDay = prayerPlanProgress[plan.id]?.currentDay ?? -1;
+    if (currentDay === -1) {
+      updatePlanProgress(plan.id, 0);
+    }
+    setView({ name: 'planViewer', plan });
+  };
+
+  const handlePlanNextDay = (planId: string) => {
+    const currentDay = prayerPlanProgress[planId]?.currentDay ?? -1;
+    updatePlanProgress(planId, currentDay + 1);
+  };
+
+  const handlePlanFinish = (planId: string) => {
+    const plan = PRAYER_PLANS.find(p => p.id === planId);
+    if (plan) {
+      updatePlanProgress(planId, plan.cardIds.length);
+    }
+    setView({ name: 'plansOverview' });
+  };
+
+  const handlePlanReset = (planId: string) => {
+    if (window.confirm("Möchten Sie den Fortschritt für diesen Plan wirklich zurücksetzen?")) {
+      resetPlan(planId);
+      setView({ name: 'plansOverview' });
+    }
+  };
 
 
   const handleBack = () => {
@@ -166,7 +205,11 @@ const App: React.FC = () => {
              setView({ name: 'overview', category });
              break;
         case 'journal':
+        case 'plansOverview':
             setView({ name: 'grid' });
+            break;
+        case 'planViewer':
+            setView({ name: 'plansOverview' });
             break;
         default:
             setView({ name: 'grid' });
@@ -182,6 +225,27 @@ const App: React.FC = () => {
             onOpenJournal={handleOpenJournal}
             onBack={handleBack}
             onDeleteEntry={deleteEntry}
+        />;
+      case 'plansOverview':
+        return <PrayerPlansOverview
+            progress={prayerPlanProgress}
+            onSelectPlan={handleSelectPlan}
+            onBack={handleBack}
+        />;
+      case 'planViewer':
+        const currentDay = prayerPlanProgress[view.plan.id]?.currentDay ?? 0;
+        if (currentDay >= view.plan.cardIds.length) {
+            setView({ name: 'plansOverview' });
+            return null;
+        }
+        return <PlanCardViewer
+            plan={view.plan}
+            currentDay={currentDay}
+            allCards={allCards}
+            onNextDay={() => handlePlanNextDay(view.plan.id)}
+            onFinishPlan={() => handlePlanFinish(view.plan.id)}
+            onResetPlan={() => handlePlanReset(view.plan.id)}
+            onClose={() => setView({name: 'plansOverview'})}
         />;
       case 'overview':
         let cardsForCategory;
@@ -227,6 +291,16 @@ const App: React.FC = () => {
         return (
           <>
             <HowToUse />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
+                <div className="col-span-1 sm:col-span-2 md:col-span-3 lg:col-span-4">
+                  <FeatureTile
+                      title="Thematische Gebetspläne"
+                      description="Geführte Reisen, um Ihr Gebetsleben zu vertiefen."
+                      Icon={MapIcon}
+                      onClick={() => setView({ name: 'plansOverview' })}
+                  />
+                </div>
+            </div>
             <CategoryGrid 
               onSelectCategory={handleSelectCategory} 
               onAddCard={handleAddCard}
