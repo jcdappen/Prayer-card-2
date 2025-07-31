@@ -150,9 +150,15 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
   }
 
   return (
-    <div className="fixed inset-0 bg-gray-900 bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-hidden">
-
-      <button onClick={handlePrev} aria-label="Vorherige Karte" className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/50 rounded-full p-2 hidden sm:block">
+    // Main container with glassmorphism background
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-lg flex items-center justify-center p-4 z-50 overflow-hidden">
+      
+      {/* Glassmorphic navigation buttons */}
+      <button 
+        onClick={handlePrev} 
+        aria-label="Vorherige Karte" 
+        className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-2 hidden sm:block transition-colors"
+      >
         <ArrowLeftIcon className="w-6 h-6" />
       </button>
       
@@ -173,63 +179,69 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
         </div>
       </div>
 
-      <button onClick={handleNext} aria-label="Nächste Karte" className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 z-50 bg-black/50 rounded-full p-2 hidden sm:block">
+      <button 
+        onClick={handleNext} 
+        aria-label="Nächste Karte" 
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-50 bg-white/10 backdrop-blur-md border border-white/20 rounded-full p-2 hidden sm:block transition-colors"
+      >
         <ArrowRightIcon className="w-6 h-6" />
       </button>
       
+      {/* Glassmorphic control bar */}
       <div 
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center px-3 py-1 rounded-full shadow-lg gap-2 transition-colors duration-300"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center px-2 py-1 rounded-full gap-1.5 transition-colors duration-300 backdrop-blur-md border border-white/20"
         style={{
-          backgroundColor: cardCategoryInfo.color,
+          // Use hex color with appended opacity for a semi-transparent effect
+          backgroundColor: cardCategoryInfo.color + 'BF', // 'BF' is ~75% opacity in hex
           color: cardCategoryInfo.textColor,
         }}
       >
         {/* Navigation */}
         <button onClick={handlePrev} aria-label="Vorherige Karte" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
-            <ArrowLeftIcon className="w-5 h-5" />
+            <ArrowLeftIcon className="w-4 h-4" />
         </button>
 
-        <span className="tabular-nums font-semibold text-sm select-none opacity-90">
+        <span className="tabular-nums font-semibold text-xs select-none opacity-90">
             {currentIndex + 1} / {categoryCards.length}
         </span>
 
         <button onClick={handleNext} aria-label="Nächste Karte" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
-            <ArrowRightIcon className="w-5 h-5" />
+            <ArrowRightIcon className="w-4 h-4" />
         </button>
 
         {/* Separator */}
-        <div className={`w-px h-5 ${separatorClass}`}></div>
+        <div className={`w-px h-4 ${separatorClass}`}></div>
 
         {/* Flip Button */}
         <button onClick={() => setIsFlipped(!isFlipped)} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte umdrehen">
-            <FlipIcon className="w-5 h-5" />
+            <FlipIcon className="w-4 h-4" />
         </button>
         
         {/* Separator */}
-        <div className={`w-px h-5 ${separatorClass}`}></div>
+        <div className={`w-px h-4 ${separatorClass}`}></div>
 
         {/* Favorite Action */}
         <button onClick={() => onToggleFavorite(currentCard.id)} className={`${isCurrentCardFavorite ? "text-yellow-400" : ""} p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Als Favorit markieren">
-            {isCurrentCardFavorite ? <StarIconFilled className="w-5 h-5" /> : <StarIconOutline className="w-5 h-5" />}
+            {isCurrentCardFavorite ? <StarIconFilled className="w-4 h-4" /> : <StarIconOutline className="w-4 h-4" />}
         </button>
         
         {/* Editable Actions */}
         {isEditable && (
             <>
-                <div className={`w-px h-5 ${separatorClass}`}></div>
+                <div className={`w-px h-4 ${separatorClass}`}></div>
                 <button onClick={() => onEdit(currentCard)} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte bearbeiten">
-                    <EditIcon className="w-5 h-5" />
+                    <EditIcon className="w-4 h-4" />
                 </button>
                 <button onClick={handleDelete} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Karte löschen">
-                    <TrashIcon className="w-5 h-5" />
+                    <TrashIcon className="w-4 h-4" />
                 </button>
             </>
         )}
 
         {/* Close Action */}
-        <div className={`w-px h-5 ${separatorClass}`}></div>
+        <div className={`w-px h-4 ${separatorClass}`}></div>
         <button onClick={onBack} aria-label="Ansicht schließen" className={`p-1 rounded-full ${hoverBgClass} transition-colors`}>
-          <CloseIcon className="w-5 h-5" />
+          <CloseIcon className="w-4 h-4" />
         </button>
       </div>
     </div>

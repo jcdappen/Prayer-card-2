@@ -172,7 +172,7 @@ export const PrayerCard: React.FC<PrayerCardProps & { isFlipped: boolean; onFlip
             frontContent={card.frontContent}
             mainText={card.frontText}
           />
-           {canSpeak && (
+           {canSpeak && !isFlipped && (
             <button
               onClick={handleToggleSpeech}
               aria-label={isSpeaking ? "Vorlesen stoppen" : "Bibelverse vorlesen"}
