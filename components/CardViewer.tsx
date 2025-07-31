@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { CategoryInfo, AnyPrayerCard, PrayerCardData, PersonCardData } from '../types';
 import { PrayerCard } from './PrayerCard';
 import { PersonCard } from './PersonCard';
-import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, FlipIcon, EditIcon, TrashIcon, StarIconOutline, StarIconFilled } from './icons';
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon, FlipIcon, EditIcon, TrashIcon, StarIconOutline, StarIconFilled, BookOpenIcon } from './icons';
 import { CATEGORIES } from '../constants';
 
 
@@ -15,9 +15,10 @@ interface CardViewerProps {
   onDelete: (cardId: string, categoryName: string) => void;
   isFavorite: (cardId: string) => boolean;
   onToggleFavorite: (cardId: string) => void;
+  onOpenJournal: (card: AnyPrayerCard) => void;
 }
 
-export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, initialIndex, onBack, onEdit, onDelete, isFavorite, onToggleFavorite }) => {
+export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, initialIndex, onBack, onEdit, onDelete, isFavorite, onToggleFavorite, onOpenJournal }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -225,6 +226,12 @@ export const CardViewer: React.FC<CardViewerProps> = ({ category, allCards, init
             {isCurrentCardFavorite ? <StarIconFilled className="w-4 h-4" /> : <StarIconOutline className="w-4 h-4" />}
         </button>
         
+        {/* Journal Button */}
+        <div className={`w-px h-4 ${separatorClass}`}></div>
+        <button onClick={() => onOpenJournal(currentCard)} className={`p-1 rounded-full ${hoverBgClass} transition-colors`} aria-label="Journal öffnen">
+            <BookOpenIcon className="w-4 h-4" />
+        </button>
+
         {/* Editable Actions */}
         {isEditable && (
             <>

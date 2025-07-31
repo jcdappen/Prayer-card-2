@@ -44,3 +44,11 @@ export interface NotificationSettings {
   time: string; // e.g., "08:00"
   days: number[]; // 0 for Sunday, 1 for Monday, etc.
 }
+
+export interface JournalEntry {
+  id: string;      // UUID for the entry itself
+  cardId: string;  // ID of the card it's associated with
+  date: string;    // ISO 8601 date string
+  title: string;   // The user's title for the reflection
+  content: string; // The user's reflection
+}

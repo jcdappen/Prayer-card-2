@@ -16,11 +16,15 @@ export const CategoryTile: React.FC<CategoryTileProps> = ({ category, onClick, o
     onAdd?.();
   }
 
+  const showAddButton = category.isSpecial && category.name !== 'FAVORITEN';
+
   return (
     <div
       onClick={onClick}
-      className="p-4 rounded-lg shadow-lg cursor-pointer transform hover:scale-105 transition-transform duration-300 flex flex-col justify-between relative"
-      style={{ backgroundColor: category.color }}
+      className="p-4 rounded-lg shadow-lg cursor-pointer transform hover:scale-105 transition-transform duration-300 flex flex-col justify-between relative backdrop-blur-md border border-white/20"
+      style={{ 
+        backgroundColor: category.color + 'BF', // ~75% opacity
+      }}
     >
       <h3 
         className="text-2xl font-bold font-serif tracking-wide"
@@ -34,7 +38,7 @@ export const CategoryTile: React.FC<CategoryTileProps> = ({ category, onClick, o
       >
         {category.cardCount} Karten
       </p>
-      {category.isSpecial && (
+      {showAddButton && (
         <button 
           onClick={handleAddClick}
           aria-label="Neue Karte erstellen"

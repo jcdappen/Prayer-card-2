@@ -24,7 +24,11 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({ onSelectCategory, on
       return { ...cat, cardCount: favoriteCardCount };
     }
     return cat;
-  }).filter(cat => cat.name !== 'FAVORITEN' || favoriteCardCount > 0);
+  }).filter(cat => {
+    // Hide favorites category if there are no favorites
+    if (cat.name === 'FAVORITEN') return favoriteCardCount > 0;
+    return true;
+  });
 
 
   return (

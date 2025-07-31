@@ -69,5 +69,5 @@ export const CATEGORIES: Record<string, CategoryInfo> = {
     textColor: "#FFFFFF",
     cardCount: 0, // This will be updated dynamically
     isSpecial: true,
-  }
+  },
 };

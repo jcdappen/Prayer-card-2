@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { CategoryGrid } from './components/CategoryGrid';
 import { CardViewer } from './components/CardViewer';
@@ -8,31 +7,38 @@ import { HowToUse } from './components/HowToUse';
 import { CategoryOverview } from './components/CategoryOverview';
 import { CATEGORIES } from './constants';
 import { CARDS } from './data/cards';
-import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard, NotificationSettings } from './types';
+import type { CategoryInfo, PrayerCardData, PersonCardData, AnyPrayerCard, NotificationSettings, JournalEntry } from './types';
 import { useCustomCards } from './hooks/useCustomCards';
 import { usePersonCards } from './hooks/usePersonCards';
 import { useFavorites } from './hooks/useFavorites';
 import { useNotificationSettings } from './hooks/useNotificationSettings';
 import { SettingsModal } from './components/SettingsModal';
-import { SettingsIcon } from './components/icons';
+import { SettingsIcon, BookOpenIcon } from './components/icons';
+import { useJournal } from './hooks/useJournal';
+import { JournalOverview } from './components/JournalOverview';
+import { JournalModal } from './components/JournalModal';
 
 type ViewState = 
   | { name: 'grid' }
   | { name: 'overview', category: CategoryInfo }
   | { name: 'viewer', category: CategoryInfo, initialIndex: number }
   | { name: 'editor', card: PrayerCardData | null }
-  | { name: 'editor-person', card: PersonCardData | null };
+  | { name: 'editor-person', card: PersonCardData | null }
+  | { name: 'journal' };
 
 const App: React.FC = () => {
   const { customCards, addCard, updateCard, deleteCard } = useCustomCards();
   const { personCards, addPersonCard, updatePersonCard, deletePersonCard } = usePersonCards();
   const { favoriteIds, toggleFavorite, isFavorite } = useFavorites();
   const { notificationSettings, saveNotificationSettings } = useNotificationSettings();
+  const { entries, addEntry, updateEntry, deleteEntry, getLatestEntryForCard } = useJournal();
   
   const allCards = useMemo(() => [...CARDS, ...customCards, ...personCards], [customCards, personCards]);
   
   const [view, setView] = useState<ViewState>({ name: 'grid' });
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [activeJournal, setActiveJournal] = useState<{entry: JournalEntry | null, card: AnyPrayerCard} | null>(null);
+
 
   const handleSelectCategory = (category: CategoryInfo) => {
     setView({ name: 'overview', category });
@@ -45,7 +51,7 @@ const App: React.FC = () => {
   const handleAddCard = (categoryName: string) => {
       if (categoryName === 'PERSONEN') {
         setView({ name: 'editor-person', card: null });
-      } else {
+      } else if (categoryName === 'MEINE KARTEN') {
         setView({ name: 'editor', card: null });
       }
   };
@@ -100,6 +106,51 @@ const App: React.FC = () => {
     setIsSettingsModalOpen(false);
   };
 
+  const handleOpenJournal = (data: AnyPrayerCard | JournalEntry) => {
+    if ('content' in data) { // It's a JournalEntry from JournalOverview
+        const card = allCards.find(c => c.id === data.cardId);
+        if (card) {
+            setActiveJournal({ entry: data, card: card });
+        } else {
+            alert("Zugehörige Karte nicht gefunden. Sie wurde möglicherweise gelöscht.");
+        }
+    } else { // It's an AnyPrayerCard from CardViewer
+        const latestEntry = getLatestEntryForCard(data.id);
+        setActiveJournal({ entry: latestEntry || null, card: data });
+    }
+  };
+
+  const handleSaveJournal = (title: string, content: string) => {
+    if (!activeJournal) return;
+    const { entry, card } = activeJournal;
+    if (entry) { // Existing entry
+        updateEntry(entry.id, title, content);
+    } else { // New entry
+        addEntry(card.id, title, content);
+    }
+    setActiveJournal(null); // Close after saving
+  };
+  
+  const handleGoToCardFromJournal = () => {
+    if (!activeJournal) return;
+    const { card } = activeJournal;
+    const category = CATEGORIES[card.category];
+    
+    // Use the native category of the card to find the index
+    const categoryCards = allCards.filter(c => c.category === card.category);
+    const cardIndex = categoryCards.findIndex(c => c.id === card.id);
+
+    if (category && cardIndex !== -1) {
+        setActiveJournal(null); // Close modal
+        // Open viewer with the card's native category
+        setView({ name: 'viewer', category, initialIndex: cardIndex });
+    } else {
+        alert('Karte konnte nicht gefunden werden.');
+        setActiveJournal(null);
+    }
+  };
+
+
   const handleBack = () => {
     switch(view.name) {
         case 'overview':
@@ -114,6 +165,9 @@ const App: React.FC = () => {
              const category = CATEGORIES[categoryName];
              setView({ name: 'overview', category });
              break;
+        case 'journal':
+            setView({ name: 'grid' });
+            break;
         default:
             setView({ name: 'grid' });
     }
@@ -121,6 +175,14 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (view.name) {
+      case 'journal':
+        return <JournalOverview
+            entries={entries}
+            allCards={allCards}
+            onOpenJournal={handleOpenJournal}
+            onBack={handleBack}
+            onDeleteEntry={deleteEntry}
+        />;
       case 'overview':
         let cardsForCategory;
         if (view.category.name === 'FAVORITEN') {
@@ -146,6 +208,7 @@ const App: React.FC = () => {
                   onDelete={handleDeleteCard}
                   isFavorite={isFavorite}
                   onToggleFavorite={toggleFavorite}
+                  onOpenJournal={handleOpenJournal}
                 />;
       case 'editor':
         return <CardEditor 
@@ -189,18 +252,40 @@ const App: React.FC = () => {
                 Eine interaktive digitale Ressource für die Gebetskarten.
             </p>
         </div>
-        <button 
-          onClick={() => setIsSettingsModalOpen(true)} 
-          className="absolute top-4 right-4 text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-          aria-label="Einstellungen für Erinnerungen"
-        >
-          <SettingsIcon className="w-8 h-8" />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+            <button
+                onClick={() => setView({ name: 'journal' })}
+                className="text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                aria-label="Mein Journal öffnen"
+            >
+                <BookOpenIcon className="w-8 h-8" />
+            </button>
+            <button 
+                onClick={() => setIsSettingsModalOpen(true)} 
+                className="text-gray-600 dark:text-gray-400 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                aria-label="Einstellungen für Erinnerungen"
+            >
+                <SettingsIcon className="w-8 h-8" />
+            </button>
+        </div>
       </header>
       
       <main className="container mx-auto px-4 py-8">
         {renderContent()}
       </main>
+
+      {activeJournal && (
+        <JournalModal
+          isOpen={!!activeJournal}
+          onClose={() => setActiveJournal(null)}
+          onSave={handleSaveJournal}
+          card={activeJournal.card}
+          initialTitle={activeJournal.entry?.title || ''}
+          initialContent={activeJournal.entry?.content || ''}
+          onGoToCard={handleGoToCardFromJournal}
+          showGoToCardLink={!!activeJournal.entry}
+        />
+      )}
 
       {isSettingsModalOpen && (
         <SettingsModal
